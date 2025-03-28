@@ -1,0 +1,38 @@
+steps:
+# 1. Build the Docker image
+- name: 'gcr.io/cloud-builders/docker'
+  args: [
+    'build',
+    '-t', '-docker.pkg.dev/my-first-project-438701//:', # Tag with commit SHA
+    '-t', '-docker.pkg.dev/my-first-project-438701//:latest', # Also tag with latest
+    '.'
+  ]
+
+# 2. Push the image to Artifact Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', '-docker.pkg.dev/my-first-project-438701//'] # Push all tags
+
+# 3. Update the Compute Engine instance to use the new image (tagged with COMMIT_SHA)
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: [
+    'compute', 'instances', 'update-container', '',
+    '--zone', '',
+    '--container-image', '-docker.pkg.dev/my-first-project-438701//:'
+  ]
+
+# Define image URIs for Cloud Build to store build artifacts
+images:
+- '-docker.pkg.dev/my-first-project-438701//:'
+- '-docker.pkg.dev/my-first-project-438701//:latest'
+
+# Substitution variables that will be passed by the trigger or defaults
+substitutions:
+  _REGION: 'us-central1' # Your GCP Region
+  _ZONE: 'us-central1-a' # Your GCP Zone
+  _REPO_NAME: 'veluchamy-repo' # Your Artifact Registry repo name
+  _IMAGE_NAME: 'lab4-flask-app' # Your image name
+  _INSTANCE_NAME: 'veluchamy-app-instance' # Your instance name
+
+options:
+  logging: CLOUD_LOGGING_ONLY
