@@ -1,4 +1,4 @@
-ksteps:
+steps:
 # 1. Build the Docker image using standard substitutions $PROJECT_ID and $COMMIT_SHA, plus custom ones
 - name: 'gcr.io/cloud-builders/docker'
   args: [
