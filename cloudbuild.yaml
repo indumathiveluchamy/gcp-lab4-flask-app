@@ -1,38 +1,40 @@
-steps:
-# 1. Build the Docker image
+ksteps:
+# 1. Build the Docker image using standard substitutions $PROJECT_ID and $COMMIT_SHA, plus custom ones
 - name: 'gcr.io/cloud-builders/docker'
   args: [
     'build',
-    '-t', '-docker.pkg.dev/my-first-project-438701//:', # Tag with commit SHA
-    '-t', '-docker.pkg.dev/my-first-project-438701//:latest', # Also tag with latest
+    '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}:$COMMIT_SHA',
+    '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}:latest',
     '.'
   ]
 
-# 2. Push the image to Artifact Registry
+# 2. Push the tagged images to Artifact Registry
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', '-docker.pkg.dev/my-first-project-438701//'] # Push all tags
+  args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}'] # Pushes all tags associated with the name
 
-# 3. Update the Compute Engine instance to use the new image (tagged with COMMIT_SHA)
+# 3. Update the Compute Engine instance to use the specific image built in this run (tagged with COMMIT_SHA)
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: gcloud
   args: [
-    'compute', 'instances', 'update-container', '',
-    '--zone', '',
-    '--container-image', '-docker.pkg.dev/my-first-project-438701//:'
+    'compute', 'instances', 'update-container', '${_INSTANCE_NAME}',
+    '--zone', '${_ZONE}',
+    '--container-image', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}:$COMMIT_SHA'
   ]
 
-# Define image URIs for Cloud Build to store build artifacts
+# Register the built images for potential use in other steps or for viewing build artifacts
 images:
-- '-docker.pkg.dev/my-first-project-438701//:'
-- '-docker.pkg.dev/my-first-project-438701//:latest'
+- '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}:$COMMIT_SHA'
+- '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_IMAGE_NAME}:latest'
 
-# Substitution variables that will be passed by the trigger or defaults
+# Define default values for custom substitution variables
+# These can be overridden by the trigger configuration if needed
 substitutions:
-  _REGION: 'us-central1' # Your GCP Region
-  _ZONE: 'us-central1-a' # Your GCP Zone
-  _REPO_NAME: 'veluchamy-repo' # Your Artifact Registry repo name
-  _IMAGE_NAME: 'lab4-flask-app' # Your image name
-  _INSTANCE_NAME: 'veluchamy-app-instance' # Your instance name
+  _REGION: 'us-central1'           # <<< VERIFY: Your GCP Region
+  _ZONE: 'us-central1-a'           # <<< VERIFY: Your GCP Zone
+  _REPO_NAME: 'veluchamy-repo'     # <<< VERIFY: Your Artifact Registry repo name
+  _IMAGE_NAME: 'lab4-flask-app'    # <<< VERIFY: Your image name in Artifact Registry
+  _INSTANCE_NAME: 'veluchamy-app-instance' # <<< VERIFY: Your Compute Engine instance name
 
+# Specify logging options (CLOUD_LOGGING_ONLY is default but explicit is fine)
 options:
   logging: CLOUD_LOGGING_ONLY
